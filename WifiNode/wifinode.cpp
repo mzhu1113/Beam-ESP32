@@ -145,6 +145,8 @@ void pageDisplayIP(String ip,String content)
     display.println(cf_node_name);
     display.print("IP:");
     display.println(ip);
+    display.print("MAC:");
+    display.println(WiFi.macAddress());
     display.println(content);
     display.display(); // actually display all of the above 
     
@@ -161,6 +163,8 @@ void pageDisplay(String content)
     display.println(cf_node_name);
     display.print("IP:");
     display.println(WiFi.localIP());
+    display.print("MAC:");
+    display.println(WiFi.macAddress());
     display.println(content);
     display.display(); // actually display all of the above 
     
