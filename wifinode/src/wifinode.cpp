@@ -256,7 +256,7 @@ void WifiNode::init()
     PRINTER_PORT.begin(115200);
     Serial2.begin(115200);
     PRINTER_PORT.setTimeout(256);
-    PRINTER_PORT.setRxBufferSize(512);
+    PRINTER_PORT.setRxBufferSize(2048);
     PRINTER_PORT.setDebugOutput(true);
 
 
