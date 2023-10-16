@@ -598,7 +598,7 @@ source.addEventListener(
       if(obj.match(reg_sd_err_init) || obj.match(reg_sd_err_subdir) ||obj.match(reg_sd_err_volinit) ||obj.match(reg_sd_err_root) )
       {
         alert('Printer init SD card failed! Can not start printing.');
-        var tt_url = '/operate?op=CANCLE';
+        var tt_url = '/operate?op=CANCEL';
         xmlHttp = new XMLHttpRequest();
         xmlHttp.open('GET', tt_url);
         xmlHttp.send();
@@ -615,7 +615,7 @@ source.addEventListener(
 
       if(b_printing)
       {
-        var tt_url = '/operate?op=CANCLE';
+        var tt_url = '/operate?op=CANCEL';
         xmlHttp = new XMLHttpRequest();
         xmlHttp.open('GET', tt_url);
         xmlHttp.send();
@@ -864,7 +864,7 @@ pauseButton.onclick = () => {
   xmlHttp.send();
 };
 cancelButton.onclick = () => {
-  var tt_url = '/operate?op=CANCLE';
+  var tt_url = '/operate?op=CANCEL';
   xmlHttp = new XMLHttpRequest();
   xmlHttp.open('GET', tt_url);
   xmlHttp.send();

@@ -179,36 +179,20 @@ void handlerRemove(AsyncWebServerRequest *request) {
       AsyncWebParameter* p = request->getParam(0);
       String path = p->value();
       espGetSDCard();
-      if(printer_sd_type==0)
+      if(path == "/"
+        && ((printer_sd_type==0 && !SD.exists((char *)path.c_str()))
+        || (printer_sd_type==1 && !SD_MMC.exists((char *)path.c_str()))))
       {
-        if (path == "/" || !SD.exists((char *)path.c_str())) 
-        {
-          espReleaseSD();
-          request->send(500, "text/plain", "BAD PATH");
-          Serial.println("path not exists");
-        }else
-        {
-          deleteRecursive(path);
-          Serial.println("send ok"); 
-          espReleaseSD();
-          request->send(200, "text/plain", "ok");
-        }
-
+        espReleaseSD();
+        request->send(500, "text/plain", "BAD PATH");
+        Serial.println("path not exists");
       }
-      else if(printer_sd_type==1)
+      else
       {
-        if (path == "/" || !SD_MMC.exists((char *)path.c_str())) 
-        {
-          espReleaseSD();
-          request->send(500, "text/plain", "BAD PATH");
-          Serial.println("path not exists");
-        }else
-        {
-          deleteRecursive(path);
-          Serial.println("send ok"); 
-          espReleaseSD();
-          request->send(200, "text/plain", "ok");
-        }
+        deleteRecursive(path);
+        Serial.println("send ok"); 
+        espReleaseSD();
+        request->send(200, "text/plain", "ok");
       }
 
 
@@ -775,7 +759,7 @@ void printerControl(AsyncWebServerRequest *request)
             g_status = PAUSE;
            
           }
-          else if(op=="CANCLE")
+          else if(op=="CANCEL")
           {
             cancelOrFinishPrint();
           }
