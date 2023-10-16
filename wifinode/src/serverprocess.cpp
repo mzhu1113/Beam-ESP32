@@ -12,7 +12,7 @@ void espReleaseSD();
 void resetUsbHostInstance();
 void sendCmdByPackage(String cmd);
 void sendCmdByPackageNow(String cmd);
-void cancleOrFinishPrint();
+void cancelOrFinishPrint();
 void getFMDfile();
 
 
@@ -87,7 +87,7 @@ void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t in
   }
 
   if(g_status==PRINTING){
-    request->send(500, "text/plain", "UPLOAD OPEN SF FAILED");
+    request->send(500, "text/plain", "Printer Currently Busy - Cannot Upload");
     return;
   }
 
@@ -685,7 +685,7 @@ void resetUSBHost(AsyncWebServerRequest *request)
   request->send(200, "text/plain","ok");
 }
 
-void cancleOrFinishPrint()
+void cancelOrFinishPrint()
 {
     // saveCurrentPrintStatus("NONE");
     last_power_status = 0;
@@ -777,7 +777,7 @@ void printerControl(AsyncWebServerRequest *request)
           }
           else if(op=="CANCLE")
           {
-            cancleOrFinishPrint();
+            cancelOrFinishPrint();
           }
           else if(op=="RECOVER")
           {

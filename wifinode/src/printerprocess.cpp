@@ -2,7 +2,7 @@
 #include "nodeconfig.h"
 #include "soc/rtc_wdt.h"
 
-extern void cancleOrFinishPrint();
+extern void cancelOrFinishPrint();
 extern void espGetSDCard();
 void printLoop(void * parameter);
 
@@ -60,12 +60,12 @@ void readPrinterBack()
   //读取所有的数据
   while (PRINTER_PORT.available() > 0 && recvl_ok == false)
   {
-    char recieved = PRINTER_PORT.read();
-    if (recieved == '\n')
+    char received = PRINTER_PORT.read();
+    if (received == '\n')
     {
       recvl_ok = true;
     }
-    inData += recieved; 
+    inData += received; 
   }
 
   //根据所含的inData做出具体的反应
@@ -143,12 +143,12 @@ void readPrinterBack()
         
         if(inData.indexOf("Finish")!=-1)
         {
-          cancleOrFinishPrint();
+          cancelOrFinishPrint();
           
         }
         else if(inData.indexOf("Done printing")!=-1)
         {
-          cancleOrFinishPrint();
+          cancelOrFinishPrint();
           
         }
         else if(inData.indexOf("resumed")!=-1)
@@ -158,7 +158,7 @@ void readPrinterBack()
         
         if(inData.indexOf("No media")!=-1)
         {
-          cancleOrFinishPrint();
+          cancelOrFinishPrint();
          
         }
         

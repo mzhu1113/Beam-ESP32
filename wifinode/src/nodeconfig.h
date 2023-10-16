@@ -85,6 +85,7 @@ extern File uploadFile;
 extern String cf_ssid;
 extern String cf_password;
 extern String cf_node_name;
+extern unsigned int cf_baudrate;
 extern unsigned int cf_filament;
 extern String total_layers;
 extern String current_layers;

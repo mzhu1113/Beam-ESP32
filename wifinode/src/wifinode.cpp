@@ -250,6 +250,7 @@ void WifiNode::init()
 	uint8_t pw_exist = 0;
     
     String b_filament = "";
+    String b_baudrate = "";
 	EEPROM.begin(256);
     //0.初始化串口和OLED屏
     PRINTER_PORT.begin(115200);
@@ -257,6 +258,8 @@ void WifiNode::init()
     PRINTER_PORT.setTimeout(120);
     PRINTER_PORT.setRxBufferSize(512);
     PRINTER_PORT.setDebugOutput(true);
+
+
 
     if(!SPIFFS.begin(true)){
         Serial.println("SPIFFS Mount Failed");
@@ -296,11 +299,10 @@ void WifiNode::init()
             printer_sd_type = 0;
         #endif
     }
-    
+
     //usb host reset
     pinMode(5, OUTPUT);
     digitalWrite(5, LOW);
-
     //faliment detector
     pinMode(19, INPUT_PULLUP);
     pinMode(18, OUTPUT);
@@ -318,8 +320,6 @@ void WifiNode::init()
     {
         digitalWrite(18, LOW);
     }
-    
-    
     
     pinMode(RED_LED, OUTPUT);
     pinMode(GREEN_LED, OUTPUT);
@@ -341,9 +341,6 @@ void WifiNode::init()
     String version = String(VERSION);
     messageDisplay(version); 
     delay(2000); 
-
-    resetUsbHostInstance();
-    delay(1000);
     
     if(!last_power_status)
     {
@@ -401,7 +398,6 @@ void WifiNode::init()
     //2.初始化wifi
     uint8_t wifi_count = 0;
     initwifi:
-    messageDisplay("Wait Connect WiFi."); 
     delay(500);
     //读取wifi账号密码，还有打印机名字
     
@@ -418,9 +414,10 @@ void WifiNode::init()
     }
 
     
-
     if(config_file)
     {
+        messageDisplay("Reading config file..."); 
+
         String tmp_str = "";
         //ssid
         tmp_str = readConfig(config_file);
@@ -441,13 +438,19 @@ void WifiNode::init()
         {
             cf_node_name = getValue(tmp_str, ':', 1);
         }
-
         //filament
         tmp_str = readConfig(config_file);
         if (tmp_str.indexOf("filament_detect")!=-1)
         {
             b_filament = getValue(tmp_str, ':', 1);
         }
+                //printer baudrate
+        tmp_str = readConfig(config_file);
+        if (tmp_str.indexOf("printer_baudrate")!=-1)
+        {
+            b_baudrate = getValue(tmp_str, ':', 1);
+        }
+
         
                
     }
@@ -464,11 +467,14 @@ void WifiNode::init()
         writeString(9,90,cf_node_name);
         cf_node_name = readString(EEPROM.read(9),90);
         delay(100);
-
         writeString(13,120,b_filament);
         b_filament = readString(EEPROM.read(13),120);
         delay(50);
         cf_filament = b_filament.toInt();
+        writeString(15,130,b_baudrate);
+        b_baudrate = readString(EEPROM.read(16),140);
+        cf_baudrate = b_baudrate.toInt();
+
         // if(printer_sd_type==0)
         //     SD.remove("/config.txt");
         // else if(printer_sd_type==1)
@@ -479,7 +485,7 @@ void WifiNode::init()
             cf_node_name = "Node Max";
         }
     }
-    else  //read ssid info frome eeprom directly
+    else
     {
         cf_ssid = readString(EEPROM.read(1),30);
         delay(100);
@@ -490,15 +496,29 @@ void WifiNode::init()
         b_filament = readString(EEPROM.read(13),120);
         delay(100);
         cf_filament = b_filament.toInt();
+        b_baudrate = readString(EEPROM.read(15),130);
+        delay(100);
+        cf_baudrate = b_baudrate.toInt();
 
         if(cf_node_name.length()>32)
         {
             cf_node_name = "Node Max";
         }
     }
+    messageDisplay("Setting up configs..."); 
+
+    PRINTER_PORT.end(true);
+    PRINTER_PORT.begin(cf_baudrate);
+    PRINTER_PORT.setTimeout(120);
+    PRINTER_PORT.setRxBufferSize(512);
+    PRINTER_PORT.setDebugOutput(true);
+    resetUsbHostInstance();
+    delay(1000);
 
     setHeaderTitil();
-    
+
+    messageDisplay("Booting wifi..."); 
+
     WiFi.mode(WIFI_STA);
 
     WiFi.persistent(false); 
@@ -513,7 +533,7 @@ void WifiNode::init()
     
     while (WiFi.status() != WL_CONNECTED && i++ < 20) 
     {
-        String point = "Wait Connect WiFi.";
+        String point = "Initializing wifi...";
         //totaly wait 10 seconds
         delay(500);
         digitalWrite(RED_LED, LOW);
@@ -534,7 +554,7 @@ void WifiNode::init()
         // DBG_OUTPUT_PORT.print("Could not connect to:");
         // DBG_OUTPUT_PORT.println(cf_ssid.c_str());
         // DBG_OUTPUT_PORT.println(cf_password.c_str());
-         messageDisplay("Connect WiFi Wrong.");
+         messageDisplay(2-wifi_count + " attempts left...");
         delay(500);
         if(wifi_count<3)
         {
@@ -556,7 +576,7 @@ void WifiNode::init()
     else
     {
         // Serial.println("wifi connect failed!!");
-        messageDisplay("Wifi Error,check SD card or password!");
+        messageDisplay("Wifi Error, check config.txt!");
         digitalWrite(RED_LED, HIGH);
         digitalWrite(GREEN_LED, HIGH);
         digitalWrite(BLUE_LED, HIGH);
@@ -591,7 +611,7 @@ void WifiNode::process()
     {
         if(current_usb_status)//connected
         {
-            pageDisplay("Printer Connected!");
+            pageDisplay("3DP Connected: " + cf_baudrate);
         }
         else
         {
