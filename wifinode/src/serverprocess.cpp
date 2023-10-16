@@ -20,6 +20,10 @@ extern void pageDisplayIP(String ip,String content);
 extern void writeString(int a,int b,String str);
 extern void writeLog(String);
 
+const size_t MP_BUFFER_SIZE = 4096;
+uint8_t mpBuffer[MP_BUFFER_SIZE];
+size_t mpBufferIndex = 0;
+
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
@@ -82,17 +86,23 @@ bool loadFromSdCard(String path, AsyncWebServerRequest *request) {
 
 
 void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t index, uint8_t *t_data, size_t len, bool final){
-  if (request->url() != "/edit") {
-    return;
-  }
-
-  if(g_status==PRINTING){
-    request->send(500, "text/plain", "Printer Currently Busy - Cannot Upload");
-    return;
-  }
+  bool failed = false;
 
   //start
+  //index only pre-flight checks
   if (!index) {
+    mpBufferIndex = 0;
+
+    // not sure why this if statement exists when the asyncws path's already defined
+    if (request->url() != "/edit") {
+      return;
+    }
+
+    if(g_status==PRINTING){
+      request->send(500, "text/plain", "Printer Currently Busy - Cannot Upload");
+      return;
+    }
+
     espGetSDCard();
     if(uploadFile){
         uploadFile.close();
@@ -114,35 +124,52 @@ void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t in
       uploadFile = SD_MMC.open(filename.c_str(), FILE_WRITE);
     }
 
-
-
     DBG_OUTPUT_PORT.print("Upload: START, filename: "); DBG_OUTPUT_PORT.println(filename);
   } 
 
   //write
-  if (len) {
+  if (len && !failed) {
     if (uploadFile) {
-      int written_len = uploadFile.write(t_data, len);
-      if(written_len != len){
-        DBG_OUTPUT_PORT.print("Faile written: WRITE, Bytes: "); 
-        DBG_OUTPUT_PORT.println(written_len);    
+      // Add data to buffer
+      for (size_t i = 0; i < len; i++) {
+        mpBuffer[mpBufferIndex++] = t_data[i];
+        // If buffer is full, write to SD card
+        if (mpBufferIndex == MP_BUFFER_SIZE) {
+          int written_len = uploadFile.write(mpBuffer, MP_BUFFER_SIZE);
+          if(written_len != MP_BUFFER_SIZE) {
+            DBG_OUTPUT_PORT.print("Failed WRITE, Bytes: "); 
+            DBG_OUTPUT_PORT.println(written_len);    
+            failed = true;
+            request->send(500, "text/plain", "File Upload Failed - Write Failure ");
+            break;
+          }
+          mpBufferIndex = 0;
+        }
       }
     }
     else
     {
-       request->send(500, "text/plain", "UPLOAD OPEN SF FAILED");
+      failed = true;
+      request->send(500, "text/plain", "File Upload Failed - Lost SD Card ");
     }
     
-    DBG_OUTPUT_PORT.print("Upload: WRITE, Bytes: "); DBG_OUTPUT_PORT.println(len);
+    // Possibly slowing and causing issues with upload speeds
+    // DBG_OUTPUT_PORT.print("Upload: WRITE, Bytes: "); 
+    // DBG_OUTPUT_PORT.println(len);
   }
 
   //finish
-  if (final){
-    if (uploadFile) {
+  if (final || failed){
+    // Write any remaining data in the buffer to the SD card
+    if (mpBufferIndex > 0 && uploadFile) {
+      uploadFile.write(mpBuffer, mpBufferIndex);
+      mpBufferIndex = 0;
       uploadFile.close();
     }
-    String logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
-    DBG_OUTPUT_PORT.print(logmessage); 
+    if (!failed) {
+      String logmessage = "Upload Complete: " + String(filename) + ",size: " + String(index + len);
+      DBG_OUTPUT_PORT.print(logmessage); 
+    }
     espReleaseSD();
   }
 }
@@ -179,9 +206,7 @@ void handlerRemove(AsyncWebServerRequest *request) {
       AsyncWebParameter* p = request->getParam(0);
       String path = p->value();
       espGetSDCard();
-      if(path == "/"
-        && ((printer_sd_type==0 && !SD.exists((char *)path.c_str()))
-        || (printer_sd_type==1 && !SD_MMC.exists((char *)path.c_str()))))
+      if(path == "/" || !SD.exists((char *)path.c_str()) || !SD_MMC.exists((char *)path.c_str()))
       {
         espReleaseSD();
         request->send(500, "text/plain", "BAD PATH");
@@ -759,7 +784,7 @@ void printerControl(AsyncWebServerRequest *request)
             g_status = PAUSE;
            
           }
-          else if(op=="CANCEL")
+          else if(op=="PCANCEL")
           {
             cancelOrFinishPrint();
           }

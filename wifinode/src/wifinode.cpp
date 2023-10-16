@@ -255,7 +255,7 @@ void WifiNode::init()
     //0.初始化串口和OLED屏
     PRINTER_PORT.begin(115200);
     Serial2.begin(115200);
-    PRINTER_PORT.setTimeout(120);
+    PRINTER_PORT.setTimeout(256);
     PRINTER_PORT.setRxBufferSize(512);
     PRINTER_PORT.setDebugOutput(true);
 
