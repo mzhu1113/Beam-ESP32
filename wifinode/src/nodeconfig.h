@@ -28,7 +28,7 @@
 #define MB(V) (V==FMTYPE)
 
 #if MB(MARLIN_VER)
-  #define VERSION "2023-04-20-2010-beta-0.1"
+  #define VERSION "2023-10-15-zlabs3d"
 #elif MB(PRUSA_VER)
   #define VERSION "2023-04-20-2010-PRUSA-MK3S-beta-0.2"
 #endif
