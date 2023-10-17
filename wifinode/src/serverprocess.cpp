@@ -104,6 +104,8 @@ void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t in
     }
 
     espGetSDCard();
+
+    Serial.println("Acquired SD Card...");
     if(uploadFile){
         uploadFile.close();
     }
@@ -123,6 +125,8 @@ void handleFileUpload(AsyncWebServerRequest *request, String filename, size_t in
       }
       uploadFile = SD_MMC.open(filename.c_str(), FILE_WRITE);
     }
+
+    writeLog("Uploading: " + filename);
 
     DBG_OUTPUT_PORT.print("Upload: START, filename: "); DBG_OUTPUT_PORT.println(filename);
   } 
@@ -1227,44 +1231,55 @@ void ServerProcess::serverInit()
 
 void hardwareReleaseSD()
 {
-      //1.release SD card
-    pinMode(2, INPUT_PULLUP);
-    pinMode(4, INPUT_PULLUP);
-    pinMode(12, INPUT_PULLUP);
-    pinMode(13, INPUT_PULLUP);
-    pinMode(14, INPUT_PULLUP);
-    pinMode(15, INPUT_PULLUP);
-
-    digitalWrite(18, HIGH);  
-    delay(50);  
-    if(printer_sd_type==0)
-    {
-      SD.end();  
-    }
-    else if(printer_sd_type==1)
-    {
-      SD_MMC.end();
-    } 
-}
-
-void espReleaseSD()
-{
-    //1.release SD card
-   pinMode(2, INPUT_PULLUP);
-   pinMode(4, INPUT_PULLUP);
-   pinMode(12, INPUT_PULLUP);
-   pinMode(13, INPUT_PULLUP);
-   pinMode(14, INPUT_PULLUP);
-   pinMode(15, INPUT_PULLUP);
+  Serial.println("hardwareReleaseSD");
 
   if(printer_sd_type==0)
   {
+    SPI.end();
     SD.end();  
   }
   else if(printer_sd_type==1)
   {
     SD_MMC.end();
+  } 
+  delay(100);  
+
+    //1.release SD card
+  pinMode(2, INPUT_PULLUP);
+  pinMode(4, INPUT_PULLUP);
+  pinMode(12, INPUT_PULLUP);
+  pinMode(13, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLUP);
+  pinMode(15, INPUT_PULLUP);
+
+  digitalWrite(18, HIGH);  
+
+}
+
+void espReleaseSD()
+{
+  Serial.println("espReleaseSD");
+    //1.release SD card
+
+  if(printer_sd_type==0)
+  {
+    SPI.end(); // This has to be called, the SD lib isn't resetting something...
+    SD.end();
   }
+  else if(printer_sd_type==1)
+  {
+    SD_MMC.end();
+  }
+
+  delay(100);
+  pinMode(4, INPUT_PULLUP);
+  pinMode(12, INPUT_PULLUP);
+  pinMode(2, INPUT);
+  pinMode(13, INPUT_PULLUP);
+  pinMode(14, INPUT_PULLUP);
+  pinMode(15, INPUT_PULLUP);
+
+
     digitalWrite(18, HIGH);  
     delay(10);
     
@@ -1277,11 +1292,16 @@ void espReleaseSD()
 void espGetSDCard()
 {
     //0. release sd from marlin
-    digitalWrite(18, LOW); 
-    delay(10);
-
     sendCmdByPackageNow("M22\n");
-    delay(50);
+    delay(250);
+    pinMode(4, INPUT);
+    pinMode(12, INPUT);
+    pinMode(14, INPUT);
+    pinMode(2, INPUT);
+    pinMode(15, INPUT);
+    pinMode(13, INPUT);
+    digitalWrite(18, LOW); 
+    delay(100);
 
     //1.初始化SD
     writeLog(cf_node_name+"SD Type:"+String(printer_sd_type));
@@ -1290,32 +1310,27 @@ void espGetSDCard()
     {   
         SPI.begin(14,2,15,13);
         int sd_get_count = 0;
-        while((sd_get_count<5))
+        while((!SD.begin(13,SPI,40000000,"/sd",5,false))&&(sd_get_count<5))
         {
-          if(SD.begin(13,SPI,4000000,"/sd",5,false))
-          {
-            // Serial.println("SD card init successful!");
-            break;
-          }
-          // else
-          // {
-          //   Serial.println("SD card init failed!");
-          // }
+          Serial.println("Attempt#: " + (sd_get_count + 1));
 
-            digitalWrite(RED_LED, LOW);
-            digitalWrite(GREEN_LED, HIGH);
-            digitalWrite(BLUE_LED, HIGH);
+          writeLog("SD card init failed!");
 
-            // DBG_OUTPUT_PORT.println("Not Found SD Card.");
-            // messageDisplay("Not Found SD Card.");        
-            delay(20);
-            digitalWrite(RED_LED, HIGH);
-            digitalWrite(GREEN_LED, HIGH);
-            digitalWrite(BLUE_LED, HIGH);  
-            delay(20);
-            sd_get_count++;
-    //        break;      
+          digitalWrite(RED_LED, LOW);
+          digitalWrite(GREEN_LED, HIGH);
+          digitalWrite(BLUE_LED, HIGH);
+
+          // DBG_OUTPUT_PORT.println("Not Found SD Card.");
+          // messageDisplay("Not Found SD Card.");        
+          delay(50);
+          digitalWrite(RED_LED, HIGH);
+          digitalWrite(GREEN_LED, HIGH);
+          digitalWrite(BLUE_LED, HIGH);  
+          delay(50);
+          sd_get_count++;
+  //        break;      
         } 
+
     }
     else if(printer_sd_type==1)
     {

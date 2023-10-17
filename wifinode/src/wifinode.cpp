@@ -252,14 +252,11 @@ void WifiNode::init()
     String b_filament = "";
     String b_baudrate = "";
 	EEPROM.begin(256);
-    //0.初始化串口和OLED屏
     PRINTER_PORT.begin(115200);
     Serial2.begin(115200);
-    PRINTER_PORT.setTimeout(256);
     PRINTER_PORT.setRxBufferSize(2048);
+    PRINTER_PORT.setTimeout(128);
     PRINTER_PORT.setDebugOutput(true);
-
-
 
     if(!SPIFFS.begin(true)){
         Serial.println("SPIFFS Mount Failed");
@@ -347,6 +344,7 @@ void WifiNode::init()
         messageDisplay("Checking SD Card ...");
         if(printer_sd_type==0)
         {
+            Serial.println("SPI Mode...");
             SPI.begin(14,2,15,13);
             int sd_get_count = 0;
             while((!SD.begin(13,SPI,4000000,"/sd",5,false))&&(sd_get_count<5))
@@ -364,10 +362,12 @@ void WifiNode::init()
                 delay(50);
                 sd_get_count++;
                 
-            } 
+            }
+            Serial.println("SPI Card Init'd...");
         }
         else if(printer_sd_type==1)
         {
+            Serial.println("SDIO Mode...");
             int sd_get_count = 0;
             while((!SD_MMC.begin())&&(sd_get_count<5))
             {
@@ -400,6 +400,7 @@ void WifiNode::init()
     initwifi:
     delay(500);
     //读取wifi账号密码，还有打印机名字
+    messageDisplay("Checking config file..."); 
     
     File config_file;
     //如果上一次断电，不是打印状态
@@ -416,7 +417,7 @@ void WifiNode::init()
     
     if(config_file)
     {
-        messageDisplay("Reading config file..."); 
+        messageDisplay("Config file found..."); 
 
         String tmp_str = "";
         //ssid
@@ -449,12 +450,9 @@ void WifiNode::init()
         if (tmp_str.indexOf("printer_baudrate")!=-1)
         {
             b_baudrate = getValue(tmp_str, ':', 1);
-        }
-
-        
-               
+        }        
+        config_file.close();       
     }
-    config_file.close();
 	
     if (pw_exist == 1)
     {   
@@ -506,12 +504,6 @@ void WifiNode::init()
         }
     }
     messageDisplay("Setting up configs..."); 
-
-    PRINTER_PORT.end(true);
-    PRINTER_PORT.begin(cf_baudrate);
-    PRINTER_PORT.setTimeout(120);
-    PRINTER_PORT.setRxBufferSize(512);
-    PRINTER_PORT.setDebugOutput(true);
     resetUsbHostInstance();
     delay(1000);
 
